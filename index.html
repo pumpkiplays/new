@@ -1,0 +1,618 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Roblox Shirt Fitter</title>
+  <style>
+    *{box-sizing:border-box}
+    :root{color-scheme:dark;--bg:#090a0f;--panel:rgba(15,17,23,.97);--line:#303642;--text:#f7f8fc;--muted:#9da5b4;--accent:#735cff}
+    html,body{margin:0;width:100%;height:100%;overflow:hidden;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text)}
+    body{display:grid;grid-template-columns:350px 1fr}
+    aside{z-index:20;height:100dvh;overflow:auto;padding:20px;background:var(--panel);border-right:1px solid var(--line);backdrop-filter:blur(18px)}
+    h1{margin:0;font-size:19px}.subtitle{margin:5px 0 20px;color:var(--muted);font-size:12px;line-height:1.45}
+    section{padding:16px 0;border-top:1px solid var(--line)}h2{margin:0 0 12px;font-size:12px;text-transform:uppercase;letter-spacing:.08em}
+    .upload{display:grid;gap:5px;min-height:82px;padding:15px;align-content:center;border:1px dashed #555d6c;border-radius:12px;background:#181b23;cursor:pointer}
+    .upload input{display:none}.upload strong{font-size:14px}.upload span{font-size:11px;color:var(--muted)}
+    label.control{display:grid;grid-template-columns:1fr auto;gap:5px 10px;margin:13px 0;font-size:12px}
+    label.control output{color:var(--muted);font-variant-numeric:tabular-nums}.control-reset{grid-column:1/-1;justify-self:end;width:auto;padding:4px 8px;border-radius:7px;font-size:10px;background:#1d212a;color:#cfd3dd;border:1px solid #353b47}input[type=range]{grid-column:1/-1;width:100%;accent-color:var(--accent)}
+    button{width:100%;padding:10px 12px;border:1px solid #3a414d;border-radius:10px;background:#242934;color:#fff;font:inherit;font-size:12px;font-weight:700;cursor:pointer}
+    button.primary{border:0;background:linear-gradient(135deg,var(--accent),#4a91ff)}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.note{font-size:11px;color:var(--muted);line-height:1.5}
+    main{position:relative;min-width:0;min-height:0;background:radial-gradient(circle at 50% 34%,rgba(118,89,255,.18),transparent 35%),linear-gradient(#141722,#090a0f)}
+    canvas{display:block;width:100%;height:100%;touch-action:none}
+    #loading,#status{position:absolute;left:50%;transform:translateX(-50%);padding:8px 12px;border-radius:999px;background:rgba(0,0,0,.64);font-size:12px}
+    #loading{top:50%;transform:translate(-50%,-50%)}#status{bottom:14px;color:#c6cad3}
+    #menuButton{display:none;position:absolute;z-index:30;top:12px;left:12px;width:auto}
+    @media(max-width:760px){body{display:block}aside{position:absolute;inset:0 auto 0 0;width:min(90vw,350px);transform:translateX(-102%);transition:.22s;box-shadow:15px 0 40px #0007}aside.open{transform:none}main{height:100dvh}#menuButton{display:block}}
+  </style>
+</head>
+<body>
+  <aside id="panel">
+    <h1>Shirt Fitter</h1>
+    <p class="subtitle">Designed for your replacement <code>shirt.glb</code>. The avatar and shirt are fitted independently. Chest, shoulder, and sleeve depth can be adjusted without editing the GLB.</p>
+
+    <section>
+      <h2>Kit texture</h2>
+      <label class="upload">
+        <input id="textureUpload" type="file" accept="image/png,image/jpeg,image/webp">
+        <strong>Upload kit texture</strong>
+        <span>The texture is applied to every mesh inside shirt.glb.</span>
+      </label>
+    </section>
+
+    <section>
+      <h2>Automatic fit</h2>
+      <div class="grid">
+        <button id="frontPreset" class="primary">Best front preset</button>
+        <button id="frontView">Front view</button>
+      </div>
+    </section>
+
+
+    <section>
+      <h2>Avatar adjustment</h2>
+      <label class="control">Avatar size <output id="avatarScaleOut">1.00</output><input id="avatarScale" type="range" min="0.50" max="1.80" step="0.01" value="1.00"></label>
+      <label class="control">Avatar left / right <output id="avatarXOut">0.00</output><input id="avatarX" type="range" min="-1.50" max="1.50" step="0.01" value="0"></label>
+      <label class="control">Avatar up / down <output id="avatarYOut">0.00</output><input id="avatarY" type="range" min="-1.50" max="1.50" step="0.01" value="0"></label>
+      <label class="control">Avatar front / back <output id="avatarZOut">0.00</output><input id="avatarZ" type="range" min="-1.50" max="1.50" step="0.01" value="0"></label>
+      <label class="control">Avatar rotation Y <output id="avatarRYOut">0°</output><input id="avatarRY" type="range" min="-180" max="180" step="1" value="0"></label>
+    
+      <label class="control">Skin tone
+        <select id="skinTone">
+          <option value="#f7efe7">Very Light</option>
+          <option value="#f0d5b5">Light</option>
+          <option value="#ddb089" selected>Tan</option>
+          <option value="#b67c52">Medium Brown</option>
+          <option value="#8a5a3b">Brown</option>
+          <option value="#5b3a24">Dark Brown</option>
+          <option value="#342116">Very Dark</option>
+          <option value="#ffffff">White (Default)</option>
+        </select>
+      </label>
+
+    </section>
+
+    <section>
+      <h2>Shirt position</h2>
+      <label class="control">Left / right <output id="xOut">0.01</output><input id="x" type="range" min="-1.5" max="1.5" step="0.01" value="0"></label>
+      <label class="control">Up / down <output id="yOut">1.95</output><input id="y" type="range" min="0.5" max="3.5" step="0.01" value="1.95"></label>
+      <label class="control">Front / back <output id="zOut">0.13</output><input id="z" type="range" min="-1" max="1" step="0.01" value="0.13"></label>
+    </section>
+
+    <section>
+      <h2>Shirt size</h2>
+      <label class="control">Overall shirt size <output id="shirtScaleOut">1.00</output><input id="shirtScale" type="range" min="0.40" max="1.80" step="0.01" value="1.00"></label>
+      <label class="control">Width <output id="widthOut">2.16</output><input id="width" type="range" min="0.5" max="4" step="0.01" value="2.16"></label>
+      <label class="control">Height <output id="heightOut">1.48</output><input id="height" type="range" min="0.5" max="3.5" step="0.01" value="1.48"></label>
+      <label class="control">Depth <output id="depthOut">0.72</output><input id="depth" type="range" min="0.2" max="2" step="0.01" value="0.72"></label>
+      <label class="control">Sleeve slimness <output id="sleeveWidthOut">0.00</output><input id="sleeveWidth" type="range" min="-1.00" max="1.00" step="0.01" value="0"></label>
+      <label class="control">Chest width <output id="chestWidthOut">0.00</output><input id="chestWidth" type="range" min="-1.00" max="1.00" step="0.01" value="0"></label>
+      <label class="control">Shoulder width <output id="shoulderWidthOut">0.00</output><input id="shoulderWidth" type="range" min="-1.00" max="1.00" step="0.01" value="0"></label>
+      <label class="control">Torso slimness <output id="torsoSlimnessOut">0.00</output><input id="torsoSlimness" type="range" min="-1.00" max="1.00" step="0.01" value="0"></label>
+      <label class="control">Crop from bottom <output id="bottomCropOut">0%</output><input id="bottomCrop" type="range" min="0" max="0.70" step="0.01" value="0"></label>
+      <label class="control">Waist fit <output id="waistFitOut">0.00</output><input id="waistFit" type="range" min="-0.60" max="0.60" step="0.01" value="0"></label>
+      <label class="control">Chest depth <output id="chestDepthOut">-0.50</output><input id="chestDepth" type="range" min="-1.00" max="2.50" step="0.01" value="2.00"></label>
+      <label class="control">Shoulder depth <output id="shoulderDepthOut">-0.35</output><input id="shoulderDepth" type="range" min="-1.50" max="3.00" step="0.01" value="0.75"></label>
+      <label class="control">Sleeve depth <output id="sleeveDepthOut">0.75</output><input id="sleeveDepth" type="range" min="-1.50" max="3.00" step="0.01" value="0.75"></label>
+    </section>
+
+    <section>
+      <h2>Rotation</h2>
+      <label class="control">Rotate X <output id="rxOut">0°</output><input id="rx" type="range" min="-180" max="180" step="1" value="0"></label>
+      <label class="control">Rotate Y <output id="ryOut">0°</output><input id="ry" type="range" min="-180" max="180" step="1" value="0"></label>
+      <label class="control">Rotate Z <output id="rzOut">0°</output><input id="rz" type="range" min="-180" max="180" step="1" value="0"></label>
+    </section>
+
+    <section>
+      <h2>Material</h2>
+      <label class="control">Roughness <output id="roughnessOut">84%</output><input id="roughness" type="range" min="0" max="1" step="0.01" value="0.84"></label>
+      <label class="control">Shirt opacity <output id="shirtOpacityOut">100%</output><input id="shirtOpacity" type="range" min="0.10" max="1" step="0.01" value="1"></label>
+      <div class="grid">
+        <button id="flipX">Flip texture X</button>
+        <button id="flipY">Flip texture Y</button>
+        <button id="toggleMesh1">Toggle mesh 1</button>
+        <button id="toggleMesh2">Toggle mesh 2</button>
+      </div>
+    </section>
+
+    <section class="grid">
+      <button id="reset">Reset</button>
+      <button id="save" class="primary">Save PNG</button>
+    </section>
+
+    <p class="note">Repository files: <code>index.html</code>, <code>roblox_boy.glb</code>, <code>shirt.glb</code>, and optionally <code>sample-shirt.png</code>.</p>
+  </aside>
+
+  <main>
+    <button id="menuButton">Controls</button>
+    <canvas id="viewport"></canvas>
+    <div id="loading">Loading avatar and shirt…</div>
+    <div id="status">Drag to rotate · scroll to zoom</div>
+  </main>
+
+  <script type="importmap">
+  {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}
+  </script>
+
+  <script type="module">
+    import * as THREE from "three";
+    import {GLTFLoader} from "three/addons/loaders/GLTFLoader.js";
+    import {OrbitControls} from "three/addons/controls/OrbitControls.js";
+
+    const canvas=document.querySelector("#viewport");
+    const panel=document.querySelector("#panel");
+    const loading=document.querySelector("#loading");
+    document.querySelector("#menuButton").onclick=()=>panel.classList.toggle("open");
+
+    const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true,preserveDrawingBuffer:true});
+    renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+    renderer.outputColorSpace=THREE.SRGBColorSpace;
+    renderer.toneMapping=THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure=1.08;
+    renderer.shadowMap.enabled=true;
+
+    const scene=new THREE.Scene();
+    const camera=new THREE.PerspectiveCamera(28,1,.01,100);
+    camera.position.set(0,1.8,8.7);
+
+    const orbit=new OrbitControls(camera,canvas);
+    orbit.target.set(0,1.75,0);
+    orbit.enableDamping=true;
+    orbit.enablePan=false;
+    orbit.minDistance=5.5;
+    orbit.maxDistance=12;
+
+    scene.add(new THREE.HemisphereLight(0xeff2ff,0x25212d,2.8));
+    const key=new THREE.DirectionalLight(0xffffff,4.2);key.position.set(4,6,5);key.castShadow=true;scene.add(key);
+    const fill=new THREE.DirectionalLight(0x8d7aff,2.4);fill.position.set(-4,3,4);scene.add(fill);
+    const rim=new THREE.DirectionalLight(0x5d7dff,2.2);rim.position.set(-3,4,-4);scene.add(rim);
+
+    const floor=new THREE.Mesh(new THREE.CircleGeometry(5,96),new THREE.MeshStandardMaterial({color:0x151823,roughness:.9}));
+    floor.rotation.x=-Math.PI/2;floor.receiveShadow=true;scene.add(floor);
+
+    const loader=new GLTFLoader();
+    const avatarGroup=new THREE.Group();
+    const avatarTransform=new THREE.Group();
+    avatarGroup.add(avatarTransform);
+    const shirtGroup=new THREE.Group();
+    scene.add(avatarGroup,shirtGroup);
+
+    let shirtRoot=null;
+    const cropUniform={value:-9999};
+    let shirtLocalMinY=0;
+    let shirtLocalMaxY=1;
+    let shirtMeshes=[];
+    const skinTone=document.querySelector('#skinTone');
+    const shirtGeometryData=new Map();
+    let shirtMaterial=null;
+    let currentTexture=null;
+    let shirtOriginalSize=new THREE.Vector3(1,1,1);
+    let shirtOriginalCenter=new THREE.Vector3();
+    let avatarBaseScale=1;
+    let flipHorizontal=false,flipVertical=false;
+
+    const fields={
+      x:document.querySelector("#x"),y:document.querySelector("#y"),z:document.querySelector("#z"),
+      width:document.querySelector("#width"),height:document.querySelector("#height"),depth:document.querySelector("#depth"),
+      rx:document.querySelector("#rx"),ry:document.querySelector("#ry"),rz:document.querySelector("#rz"),
+      roughness:document.querySelector("#roughness"),chestDepth:document.querySelector("#chestDepth"),shoulderDepth:document.querySelector("#shoulderDepth"),sleeveDepth:document.querySelector("#sleeveDepth"),shirtScale:document.querySelector("#shirtScale"),sleeveWidth:document.querySelector("#sleeveWidth"),waistFit:document.querySelector("#waistFit"),shirtOpacity:document.querySelector("#shirtOpacity"),avatarScale:document.querySelector("#avatarScale"),avatarX:document.querySelector("#avatarX"),avatarY:document.querySelector("#avatarY"),avatarZ:document.querySelector("#avatarZ"),avatarRY:document.querySelector("#avatarRY"),chestWidth:document.querySelector("#chestWidth"),shoulderWidth:document.querySelector("#shoulderWidth"),torsoSlimness:document.querySelector("#torsoSlimness"),bottomCrop:document.querySelector("#bottomCrop")
+    };
+    const outputs={
+      x:document.querySelector("#xOut"),y:document.querySelector("#yOut"),z:document.querySelector("#zOut"),
+      width:document.querySelector("#widthOut"),height:document.querySelector("#heightOut"),depth:document.querySelector("#depthOut"),
+      rx:document.querySelector("#rxOut"),ry:document.querySelector("#ryOut"),rz:document.querySelector("#rzOut"),
+      roughness:document.querySelector("#roughnessOut"),chestDepth:document.querySelector("#chestDepthOut"),shoulderDepth:document.querySelector("#shoulderDepthOut"),sleeveDepth:document.querySelector("#sleeveDepthOut"),shirtScale:document.querySelector("#shirtScaleOut"),sleeveWidth:document.querySelector("#sleeveWidthOut"),waistFit:document.querySelector("#waistFitOut"),shirtOpacity:document.querySelector("#shirtOpacityOut"),avatarScale:document.querySelector("#avatarScaleOut"),avatarX:document.querySelector("#avatarXOut"),avatarY:document.querySelector("#avatarYOut"),avatarZ:document.querySelector("#avatarZOut"),avatarRY:document.querySelector("#avatarRYOut"),chestWidth:document.querySelector("#chestWidthOut"),shoulderWidth:document.querySelector("#shoulderWidthOut"),torsoSlimness:document.querySelector("#torsoSlimnessOut"),bottomCrop:document.querySelector("#bottomCropOut")
+    };
+    const defaults={
+      x:0.01,
+      y:1.95,
+      z:-0.05,
+      width:1.85,
+      height:1.48,
+      depth:0.77,
+      rx:0,
+      ry:0,
+      rz:0,
+      roughness:0.84,
+      chestDepth:2.00,
+      shoulderDepth:0.75,
+      sleeveDepth:0.75,
+      shirtScale:1.08,
+      sleeveWidth:-1.00,
+      chestWidth:0.12,
+      shoulderWidth:0.32,
+      torsoSlimness:0.09,
+      bottomCrop:0.00,
+      waistFit:0.00,
+      shirtOpacity:1.00,
+      avatarScale:1.00,
+      avatarX:0.00,
+      avatarY:0.00,
+      avatarZ:0.00,
+      avatarRY:0
+    };
+
+    const loadGLB=url=>new Promise((resolve,reject)=>loader.load(url,g=>resolve(g.scene),undefined,reject));
+
+
+    function applyGarmentShape(chestAmount, shoulderAmount, sleeveAmount, sleeveWidthAmount, waistFitAmount, chestWidthAmount, shoulderWidthAmount, torsoSlimnessAmount){
+      for(const mesh of shirtMeshes){
+        const data=shirtGeometryData.get(mesh);
+        if(!data)continue;
+
+        const position=mesh.geometry.attributes.position;
+        const base=data.base;
+        const cx=data.center.x;
+        const cy=data.center.y;
+        const cz=data.center.z;
+        const width=Math.max(data.size.x,0.0001);
+        const height=Math.max(data.size.y,0.0001);
+        const depth=Math.max(data.size.z,0.0001);
+
+        const meshName=(mesh.name||"").toLowerCase();
+        const isSleeveMesh=meshName.includes("sleeve") || meshName.includes("arm");
+
+        for(let i=0;i<position.count;i++){
+          const x=base[i*3];
+          const y=base[i*3+1];
+          const z=base[i*3+2];
+
+          const nx=(x-cx)/(width*0.5);
+          const ny=(y-cy)/(height*0.5);
+
+          // Front-only influence.
+          const frontFactor=THREE.MathUtils.smoothstep(
+            z,
+            cz-depth*0.10,
+            cz+depth*0.48
+          );
+
+          // Stronger chest shaping than before.
+          const chestCenterY=cy+height*0.10;
+          const chestY=(y-chestCenterY)/(height*0.26);
+          const chestX=(x-cx)/(width*0.44);
+          const chestMask=
+            Math.exp(-chestX*chestX*1.35) *
+            Math.exp(-chestY*chestY*1.65) *
+            frontFactor;
+
+          // Shoulder zone near the top outer sides.
+          const shoulderY=(y-(cy+height*0.34))/(height*0.18);
+          const outerX=Math.abs((x-cx)/(width*0.5));
+          const shoulderX=Math.exp(-Math.pow((outerX-0.72)/0.24,2));
+          const shoulderMask=
+            Math.exp(-shoulderY*shoulderY*1.5) *
+            shoulderX *
+            frontFactor;
+
+          // Sleeve shaping: strongest on sleeve meshes; fallback to outer-upper zones.
+          let sleeveMask=0;
+          if(isSleeveMesh){
+            const sleeveY=(y-cy)/(height*0.46);
+            sleeveMask=
+              Math.exp(-sleeveY*sleeveY*0.9) *
+              frontFactor;
+          }else{
+            const sleeveY=(y-(cy+height*0.20))/(height*0.30);
+            const sleeveOuter=Math.exp(-Math.pow((outerX-0.95)/0.18,2));
+            sleeveMask=
+              Math.exp(-sleeveY*sleeveY*1.2) *
+              sleeveOuter *
+              frontFactor;
+          }
+
+          const push=
+            chestAmount*3.25*chestMask +
+            shoulderAmount*3.10*shoulderMask +
+            sleeveAmount*2.90*sleeveMask;
+
+          let shapedX=x;
+          let shapedZ=z+push;
+
+          if(isSleeveMesh){
+            // Sleeve slimness:
+            // -1.00 = very slim, 0.00 = original, +1.00 = much wider.
+            const sleeveScale=THREE.MathUtils.clamp(
+              1.0 + sleeveWidthAmount*0.72,
+              0.22,
+              1.85
+            );
+
+            shapedX=cx+(x-cx)*sleeveScale;
+            shapedZ=cz+(z-cz)*sleeveScale+push;
+          }else{
+            const lowerBodyMask=Math.exp(-Math.pow((ny+0.62)/0.34,2));
+            const chestWidthMask=Math.exp(-Math.pow((ny-0.10)/0.32,2));
+            const shoulderWidthMask=Math.exp(-Math.pow((ny-0.72)/0.22,2));
+            const torsoMask=Math.exp(-Math.pow((ny+0.08)/0.82,2));
+
+            const waistScale=1.0 + waistFitAmount*0.22*lowerBodyMask;
+            const chestScale=1.0 + chestWidthAmount*0.42*chestWidthMask;
+            const shoulderScale=1.0 + shoulderWidthAmount*0.48*shoulderWidthMask;
+            const torsoScale=1.0 + torsoSlimnessAmount*0.50*torsoMask;
+
+            const combinedScale=THREE.MathUtils.clamp(
+              waistScale*chestScale*shoulderScale*torsoScale,
+              0.28,
+              1.95
+            );
+
+            shapedX=cx+(x-cx)*combinedScale;
+          }
+
+          position.setXYZ(i,shapedX,y,shapedZ);
+        }
+
+        position.needsUpdate=true;
+        mesh.geometry.computeVertexNormals();
+        mesh.geometry.computeBoundingBox();
+        mesh.geometry.computeBoundingSphere();
+      }
+    }
+
+    function applyFit(){
+      if(!shirtRoot)return;
+      const v={};
+      for(const[k,input]of Object.entries(fields))v[k]=Number(input.value);
+
+      shirtRoot.position.set(v.x,v.y,v.z);
+      shirtRoot.rotation.set(
+        THREE.MathUtils.degToRad(v.rx),
+        THREE.MathUtils.degToRad(v.ry),
+        THREE.MathUtils.degToRad(v.rz)
+      );
+      shirtRoot.scale.set(
+        (v.width/Math.max(shirtOriginalSize.x,.0001))*v.shirtScale,
+        (v.height/Math.max(shirtOriginalSize.y,.0001))*v.shirtScale,
+        (v.depth/Math.max(shirtOriginalSize.z,.0001))*v.shirtScale
+      );
+
+      if(shirtMaterial){shirtMaterial.roughness=v.roughness;shirtMaterial.opacity=v.shirtOpacity;shirtMaterial.transparent=v.shirtOpacity<0.999;shirtMaterial.needsUpdate=true}
+      applyGarmentShape(v.chestDepth,v.shoulderDepth,v.sleeveDepth,v.sleeveWidth,v.waistFit,v.chestWidth,v.shoulderWidth,v.torsoSlimness);
+      avatarTransform.scale.setScalar(v.avatarScale);
+      avatarTransform.position.set(v.avatarX,v.avatarY,v.avatarZ);
+      avatarTransform.rotation.y=THREE.MathUtils.degToRad(v.avatarRY);
+
+      // 0 = no crop; 0.70 removes up to 70% of the shirt height from below.
+      cropUniform.value=THREE.MathUtils.lerp(
+        shirtLocalMinY-0.001,
+        shirtLocalMaxY,
+        v.bottomCrop
+      );
+      if(shirtMaterial)shirtMaterial.needsUpdate=true;
+
+      outputs.x.value=v.x.toFixed(2);outputs.y.value=v.y.toFixed(2);outputs.z.value=v.z.toFixed(2);
+      outputs.width.value=v.width.toFixed(2);outputs.height.value=v.height.toFixed(2);outputs.depth.value=v.depth.toFixed(2);
+      outputs.rx.value=`${Math.round(v.rx)}°`;outputs.ry.value=`${Math.round(v.ry)}°`;outputs.rz.value=`${Math.round(v.rz)}°`;
+      outputs.roughness.value=`${Math.round(v.roughness*100)}%`;
+      outputs.chestDepth.value=v.chestDepth.toFixed(2);
+      outputs.shoulderDepth.value=v.shoulderDepth.toFixed(2);
+      outputs.sleeveDepth.value=v.sleeveDepth.toFixed(2);
+      outputs.shirtScale.value=v.shirtScale.toFixed(2);
+      outputs.sleeveWidth.value=v.sleeveWidth.toFixed(2);
+      outputs.waistFit.value=v.waistFit.toFixed(2);
+      outputs.shirtOpacity.value=`${Math.round(v.shirtOpacity*100)}%`;
+      outputs.avatarScale.value=v.avatarScale.toFixed(2);
+      outputs.avatarX.value=v.avatarX.toFixed(2);
+      outputs.avatarY.value=v.avatarY.toFixed(2);
+      outputs.avatarZ.value=v.avatarZ.toFixed(2);
+      outputs.avatarRY.value=`${Math.round(v.avatarRY)}°`;
+      outputs.chestWidth.value=v.chestWidth.toFixed(2);
+      outputs.shoulderWidth.value=v.shoulderWidth.toFixed(2);
+      outputs.torsoSlimness.value=v.torsoSlimness.toFixed(2);
+      outputs.bottomCrop.value=`${Math.round(v.bottomCrop*100)}%`;
+    }
+
+    
+    function addPerSettingResetButtons(){
+      document.querySelectorAll("label.control").forEach(label=>{
+        const input=label.querySelector('input[type="range"]');
+        if(!input || label.querySelector(".control-reset"))return;
+
+        const button=document.createElement("button");
+        button.type="button";
+        button.className="control-reset";
+        button.textContent="Reset to preset";
+        button.addEventListener("click",event=>{
+          event.preventDefault();
+          event.stopPropagation();
+
+          const key=Object.keys(fields).find(name=>fields[name]===input);
+          if(!key || !(key in defaults))return;
+
+          input.value=String(defaults[key]);
+          input.dispatchEvent(new Event("input",{bubbles:true}));
+        });
+
+        label.appendChild(button);
+      });
+    }
+
+Object.values(fields).forEach(input=>input.addEventListener("input",applyFit));
+    skinTone.addEventListener("change",()=>{
+      avatarGroup.traverse(o=>{
+        if(o.isMesh && o.material){
+          o.material.color.set(skinTone.value);
+        }
+      });
+    });
+
+    function loadTexture(url,optional=false){
+      new THREE.TextureLoader().load(url,t=>{
+        t.colorSpace=THREE.SRGBColorSpace;
+        t.flipY=false;
+        t.wrapS=t.wrapT=THREE.ClampToEdgeWrapping;
+        t.anisotropy=renderer.capabilities.getMaxAnisotropy();
+        if(currentTexture)currentTexture.dispose();
+        currentTexture=t;
+        applyTextureFlip();
+        shirtMaterial.map=t;
+        shirtMaterial.needsUpdate=true;
+      },undefined,e=>{if(!optional)console.error(e)});
+    }
+
+    function applyTextureFlip(){
+      if(!currentTexture)return;
+      currentTexture.repeat.set(flipHorizontal?-1:1,flipVertical?-1:1);
+      currentTexture.offset.set(flipHorizontal?1:0,flipVertical?1:0);
+      currentTexture.needsUpdate=true;
+    }
+
+    async function initialise(){
+      try{
+        const[avatar,shirt]=await Promise.all([loadGLB("./roblox_boy.glb"),loadGLB("./shirt.glb")]);
+
+        avatarTransform.add(avatar);
+        avatar.traverse(o=>{
+          if(o.isMesh){
+            o.material=o.material.clone();
+            o.material.color.set(skinTone.value);
+          }if(o.isMesh){o.castShadow=true;o.receiveShadow=true}});
+
+        const avatarBox=new THREE.Box3().setFromObject(avatar);
+        const avatarSize=avatarBox.getSize(new THREE.Vector3());
+        const avatarCenter=avatarBox.getCenter(new THREE.Vector3());
+        const avatarScale=3.4/avatarSize.y;
+        avatar.scale.setScalar(avatarScale);
+        avatar.position.set(-avatarCenter.x*avatarScale,-avatarBox.min.y*avatarScale,-avatarCenter.z*avatarScale);
+
+        shirtRoot=new THREE.Group();
+        shirtGroup.add(shirtRoot);
+        shirtRoot.add(shirt);
+
+        const shirtBox=new THREE.Box3().setFromObject(shirt);
+        shirtOriginalSize=shirtBox.getSize(new THREE.Vector3());
+        shirtOriginalCenter=shirtBox.getCenter(new THREE.Vector3());
+
+        shirtLocalMinY=shirtBox.min.y-shirtOriginalCenter.y;
+        shirtLocalMaxY=shirtBox.max.y-shirtOriginalCenter.y;
+
+        // Put the shirt's own center at its parent origin before fitting.
+        shirt.position.sub(shirtOriginalCenter);
+
+        shirtMaterial=new THREE.MeshStandardMaterial({
+          color:0xffffff,
+          roughness:.82,
+          metalness:0,
+          side:THREE.DoubleSide
+        });
+
+        // Crop the garment from the bottom without editing the GLB.
+        // Fragments below cropUniform are discarded in the shirt's local Y space.
+        shirtMaterial.onBeforeCompile=shader=>{
+          shader.uniforms.cropY=cropUniform;
+
+          shader.vertexShader=shader.vertexShader
+            .replace(
+              "#include <common>",
+              "#include <common>\nvarying float vShirtLocalY;"
+            )
+            .replace(
+              "#include <begin_vertex>",
+              "#include <begin_vertex>\nvShirtLocalY=position.y;"
+            );
+
+          shader.fragmentShader=shader.fragmentShader
+            .replace(
+              "#include <common>",
+              "#include <common>\nvarying float vShirtLocalY;\nuniform float cropY;"
+            )
+            .replace(
+              "#include <dithering_fragment>",
+              "if(vShirtLocalY<cropY) discard;\n#include <dithering_fragment>"
+            );
+        };
+
+        shirtMaterial.customProgramCacheKey=()=>String(cropUniform.value);
+
+        shirt.traverse(o=>{
+          if(!o.isMesh)return;
+
+          // Clone the geometry so chest deformation never modifies the source GLB.
+          o.geometry=o.geometry.clone();
+          const position=o.geometry.attributes.position;
+          o.geometry.computeBoundingBox();
+          const box=o.geometry.boundingBox.clone();
+          const center=box.getCenter(new THREE.Vector3());
+          const size=box.getSize(new THREE.Vector3());
+
+          shirtGeometryData.set(o,{
+            base:new Float32Array(position.array),
+            center,
+            size
+          });
+
+          o.material=shirtMaterial;
+          o.castShadow=true;
+          o.receiveShadow=true;
+          shirtMeshes.push(o);
+        });
+
+        Object.entries(defaults).forEach(([key,value])=>{
+          fields[key].value=String(value);
+        });
+        applyFit();
+        loading.hidden=true;
+        loadTexture("./sample-shirt.png",true);
+      }catch(error){
+        console.error(error);
+        loading.textContent="Could not load roblox_boy.glb or shirt.glb.";
+      }
+    }
+
+    document.querySelector("#textureUpload").onchange=e=>{
+      const file=e.target.files?.[0];
+      if(file){loadTexture(URL.createObjectURL(file));panel.classList.remove("open")}
+    };
+
+    document.querySelector("#frontPreset").onclick=()=>{
+      flipHorizontal=false;
+      flipVertical=false;
+      applyTextureFlip();
+
+      Object.entries(defaults).forEach(([key,value])=>{
+        fields[key].value=String(value);
+      });
+
+      applyFit();
+      camera.position.set(0,1.8,8.7);
+      orbit.target.set(0,1.75,0);
+      orbit.update();
+    };
+
+    document.querySelector("#frontView").onclick=()=>{
+      camera.position.set(0,1.8,8.7);orbit.target.set(0,1.75,0);orbit.update();
+    };
+
+    document.querySelector("#flipX").onclick=()=>{flipHorizontal=!flipHorizontal;applyTextureFlip()};
+    document.querySelector("#flipY").onclick=()=>{flipVertical=!flipVertical;applyTextureFlip()};
+    document.querySelector("#toggleMesh1").onclick=()=>{if(shirtMeshes[0])shirtMeshes[0].visible=!shirtMeshes[0].visible};
+    document.querySelector("#toggleMesh2").onclick=()=>{if(shirtMeshes[1])shirtMeshes[1].visible=!shirtMeshes[1].visible};
+
+    document.querySelector("#reset").onclick=()=>{
+      flipHorizontal=false;flipVertical=false;applyTextureFlip();
+      Object.entries(defaults).forEach(([k,v])=>fields[k].value=String(v));
+      applyFit();
+    };
+
+    document.querySelector("#save").onclick=()=>{
+      renderer.render(scene,camera);
+      const a=document.createElement("a");
+      a.download="roblox-shirt-preview.png";
+      a.href=renderer.domElement.toDataURL("image/png");
+      a.click();
+    };
+
+    function resize(){
+      const w=canvas.clientWidth,h=canvas.clientHeight;
+      if(canvas.width!==Math.floor(w*renderer.getPixelRatio())||canvas.height!==Math.floor(h*renderer.getPixelRatio())){
+        renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();
+      }
+    }
+
+    function animate(){requestAnimationFrame(animate);resize();orbit.update();renderer.render(scene,camera)}
+    addPerSettingResetButtons();initialise();animate();
+  </script>
+</body>
+</html>
